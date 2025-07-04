@@ -1,0 +1,8 @@
+openai-agents
+chainlit
+apify-client
+firecrawl
+elevenlabs
+SpeechRecognition
+pyaudio
+python-dotenv
