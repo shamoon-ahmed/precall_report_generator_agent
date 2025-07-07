@@ -106,7 +106,7 @@ async def chat(message: cl.Message):
         # Run blocking code in thread to avoid blocking event loop
         user_query = await asyncio.to_thread(listen_from_mic)
         if not user_query:
-            await cl.Message(content="❌ Couldn't recognize your speech. Try again or type your message.").send()
+            await cl.Message(content="❌ Couldn't recognize your speech...").send()
             return
         message_text = user_query
         await cl.Message(content=f"🗣️ You said: {message_text}").send()
