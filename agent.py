@@ -2,8 +2,6 @@ from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel, funct
 from firecrawl import FirecrawlApp
 from apify_client import ApifyClient
 from agents.run import RunConfig
-from elevenlabs import play
-from elevenlabs.client import ElevenLabs
 import chainlit as cl
 import speech_recognition as sr  # <-- Added speech recognition for listening
 import asyncio
@@ -12,7 +10,7 @@ import os
 GEMINI_API_KEY= os.getenv("GEMINI_API_KEY")
 LINKEDIN_SCRAPER_API_KEY= os.getenv("LINKEDIN_SCRAPER_API_KEY")
 FIRECRAWL_API_KEY= os.getenv("FIRECRAWL_API_KEY")
-ELEVENLABS_API_KEY= os.getenv("ELEVENLABS_API_KEY")
+
 
 provider = AsyncOpenAI(
     api_key=GEMINI_API_KEY,
@@ -73,19 +71,6 @@ agent = Agent(
     model=model,
 )
 
-voice_call_agent = Agent(
-    name="Voice Caller Agent",
-    instructions='''
-    You are a sales agent making an outbound call to a prospect.
-    You already have a pre-call report which contains important information about the prospect and their company.
-    Use that information to guide your conversation and sell the product/service effectively.
-    Talk in a conversational and friendly tone.
-    don't generate a call script. wait for the person to respond, then talk again based on their response. 
-    ''',
-    model=model,
-)
-
-eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 def listen_from_mic():
     recognizer = sr.Recognizer()
@@ -171,34 +156,6 @@ async def chat(message: cl.Message):
                 await msg.stream_token(token)
         cl.user_session.set("precall_report", result.final_output)
         await cl.Message(content="✅ Pre-call report generated and saved.").send()
-        return
-
-    # 4. Handle making the call
-    if "call the prospect" in message_text.lower():
-        precall_report = cl.user_session.get("precall_report")
-
-        if not precall_report:
-            await cl.Message(content="❌ Pre-call report not found. Please generate it before making the call.").send()
-            return
-
-        result = Runner.run_streamed(voice_call_agent, input=[{"role": "user", "content": precall_report}], run_config=config)
-        
-        assistant_response = ""
-        async for event in result.stream_events():
-            if event.type == "raw_response_event" and hasattr(event.data, 'delta'):
-                token = event.data.delta
-                assistant_response += token
-                await msg.stream_token(token)
-
-        await cl.Message(content="📞 Voice call simulation completed.").send()
-
-        audio = eleven_client.text_to_speech.convert(
-            text=assistant_response,
-            voice_id="JBFqnCBsd6RMkjVDRZzb",
-            model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_128",
-        )
-        play(audio)
         return
 
     # 5. Default behavior — run the main agent
